@@ -3,33 +3,111 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Document</title>
+    <title>QuizMaker+ | Gemini AI</title>
+    <style> /*styling by AI, for reference*/
+        /*body { font-family: sans-serif; background: #f4f4f9; display: flex; justify-content: center; padding: 20px; }
+        .container { background: white; padding: 30px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); width: 100%; max-width: 500px; }
+        .window-header { font-weight: bold; margin-bottom: 20px; display: flex; justify-content: space-between; border-bottom: 1px solid #eee; padding-bottom: 10px; }
+        label { display: block; font-weight: 600; margin-bottom: 8px; font-size: 14px; }
+        input[type="text"], input[type="number"], input[type="file"] { width: 100%; padding: 10px; margin-bottom: 20px; border: 1px solid #ddd; border-radius: 6px; box-sizing: border-box; }
+
+        .toggle-group { display: flex; gap: 10px; margin-bottom: 20px; }
+        .toggle-group input[type="radio"] { display: none; }
+        .toggle-group label {
+            flex: 1; text-align: center; padding: 10px; border: 1px solid #ddd; border-radius: 6px;
+            cursor: pointer; transition: 0.3s; background: #fff; font-weight: normal;
+        }
+        .toggle-group input[type="radio"]:checked + label { background: #007bff; color: white; border-color: #007bff; }
+
+        .checkbox-group { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 30px; }
+        .checkbox-item { font-size: 14px; display: flex; align-items: center; gap: 8px; font-weight: normal; }
+
+        .btn-primary { width: 100%; padding: 12px; background: #007bff; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 16px; font-weight: bold; }
+        .btn-primary:hover { background: #0056b3; }*/
+    </style>
 </head>
 <body>
-    <div class="window-header">QuizMaker <span>+ 👤</span></div>
-    <div class="container" style="max-width: 500px;">
+
+    <div class="container">
+        <div class="window-header">QuizMaker <span>+ 👤</span></div>
         <h2>Configure Your Quiz</h2>
-        <div style="margin-bottom: 20px;">
-            <label>Topic or Subject</label>
-            <input type="text" placeholder="Enter topic...">
-        </div>
-        <div style="margin-bottom: 20px;">
+
+        <form id="quiz-form">
+            <label for="itopic">Topic or Subject</label>
+            <input type="text" id="itopic" name="topic" placeholder="e.g. Ancient Rome" required><br>
+
+            <label for="ifile">Reference File (Optional)</label>
+            <input type="file" id="ifile" name="file"><br>
+
+            <label for="inumber">Number of Questions</label>
+            <input type="number" id="inumber" name="number" min="5" max="50" value="10"><br>
+
             <label>Difficulty Level</label>
             <div class="toggle-group">
-                <button>Easy</button>
-                <button class="active">Medium</button>
-                <button>Hard</button>
+                <input type="radio" id="ieasy" name="difficulty" value="easy">
+                <label for="ieasy">Easy</label>
+
+                <input type="radio" id="imedium" name="difficulty" value="medium" checked>
+                <label for="imedium">Medium</label>
+
+                <input type="radio" id="ihard" name="difficulty" value="hard">
+                <label for="ihard">Hard</label>
             </div>
-        </div>
-        <div style="margin-bottom: 30px;">
+
             <label>Question Types</label>
-            <select>
-                <option>Multiple Choice</option>
-                <option>True / False</option>
-            </select>
-        </div>
-        <button class="btn-primary" style="width: 100%; ">Generate Quiz</button>
+            <div class="checkbox-group">
+                <label class="checkbox-item"><input type="checkbox" name="types" value="Multiple Choice" checked> Multiple Choice</label>
+                <label class="checkbox-item"><input type="checkbox" name="types" value="Identification"> Identification</label>
+                <label class="checkbox-item"><input type="checkbox" name="types" value="True or False"> True/False</label>
+                <label class="checkbox-item"><input type="checkbox" name="types" value="Enumeration"> Enumeration</label>
+            </div>
+
+            <button type="submit" class="btn-primary">Generate Quiz</button>
+        </form>
     </div>
+
+    <script type="module">
+        // todo: disable generate button while loading prompt
+        // todo: read/pass method based on file;
+        import { GoogleGenerativeAI } from "https://esm.run/@google/generative-ai";
+
+        const API_KEY = "AIzaSyAUodEfGCdgQiMlW4UXRVdp6kIZTFuK1RM";
+        const genAI = new GoogleGenerativeAI(API_KEY);
+        const quizForm = document.getElementById('quiz-form');
+
+        async function runGemini(customPrompt) {
+            try {
+                const model = genAI.getGenerativeModel({ model: "gemini-flash-latest" });
+                console.log("Waiting for response...");
+                const result = await model.generateContent(customPrompt);
+                console.log("Gemini Output:\n", result.response.text());
+            } catch (error) {
+                console.error("Error:", error);
+            }
+        }
+
+        quizForm.addEventListener('submit', async (event) => {
+            event.preventDefault();
+            const formData = new FormData(quizForm);
+
+            const data = {
+                topic: formData.get('topic'),
+                number: formData.get('number'),
+                difficulty: formData.get('difficulty'),
+                types: formData.getAll('types')
+            };
+
+            if (data.types.length === 0) {
+                alert("Please select at least one question type!");
+                return;
+            }
+
+            const prompt = `Generate a ${data.number}-question ${data.difficulty} quiz about ${data.topic}.
+                            Include the following types: ${data.types.join(', ')}.`;
+
+            console.log("Prompting:", prompt);
+            // await runGemini(prompt);
+        });
+    </script>
 </body>
 </html>
-
