@@ -4,22 +4,29 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Document</title>
+    <style>
+        .btn-correct, .input-correct { background-color: #d4edda !important; border: 2px solid #28a745 !important; }
+        .btn-incorrect, .input-incorrect { background-color: #f8d7da !important; border: 2px solid #dc3545 !important; }
+        .btn-outline { border: 1px solid #ccc; background: white; }
+        .input-correct { background-color: #d4edda !important; border: 2px solid #28a745 !important; }
+        .input-incorrect { background-color: #f8d7da !important; border: 2px solid #dc3545 !important; }
+    </style>
 </head>
 <body>
     <div class="container" style="max-width: 600px;">
-        <div style="background: #eee; height: 8px; border-radius: 4px; margin-bottom: 30px;">
-            <div style="background: black; width: 60%; height: 100%; border-radius: 4px;"></div>
+        <div id="progress-bar" style="background: #eee; height: 8px; border-radius: 4px; margin-bottom: 30px;">
+            <div id="progress-fill" style="background: black; width: 60%; height: 100%; border-radius: 4px;"></div>
         </div>
         <h3 id="question-text"></h3>
         <div id="mcq-container" class="input-group" style="display: none; ">
             <button id="choiceA" class="btn-outline" style="text-align: left;">A. Sample choice</button>
-            <button id="choiceB" class="btn-primary" style="text-align: left;">B. Sample choice (Selected)</button>
+            <button id="choiceB" class="btn-primary" style="text-align: left;">B. Sample choice</button>
             <button id="choiceC" class="btn-outline" style="text-align: left;">C. Sample choice</button>
             <button id="choiceD" class="btn-outline" style="text-align: left;">D. Sample choice</button>
         </div>
         <div id="true-false-container" class="input-group" style="display: none;">
-            <button>True</button>
-            <button>False</button>
+            <button id="choiceTrue" class="btn-outline" style="text-align: left;">True</button>
+            <button id="choiceFalse" class="btn-outline" style="text-align: left;">False</button>
         </div>
         <div id="short-answer-container" class="input-group" style="display: none;">
             <input type="text" placeholder="Enter your answer"><br>
@@ -27,12 +34,42 @@
         <div id="enumeration-container" class="input-group" style="display: none;">
             <div id="enum-inputs-wrapper"></div>
         </div>
-        <div style="display: flex; justify-content: space-between;">
-            <button onclick="handlePrev()" class="btn-outline">Previous</button>
-            <button onclick="handleNext()" class="btn-primary">Next</button>
+        <div id="feedback-text" style="margin: 15px 0; font-weight: bold; min-height: 1.2em;"></div>
+        <div id="navigation-buttons" style="display: flex; justify-content: space-between;">
+            <button id="prev-button" onclick="handlePrev()" class="btn-outline">Previous</button>
+            <button id="submit-button" onclick="handleSubmit()" class="btn-primary" style="display: none;">Submit</button>
+            <button id="next-button" onclick="handleNext()" class="btn-primary">Next</button>
         </div>
     </div>
+    <div id="results-screen" class="container" style="max-width: 600px; display: none;">
+        <h1>Quiz Complete!</h1>
+        <div id=score-wrapper>
+            <span id="final-score">0</span> / <span id="total-questions">0</span>
+        </div>
+        <div id=points-wrapper>
+            <span id="final-points">0</span> / <span id="total-points">0</span>
+        </div>
+        <p id="score-message"></p>
+
+        <div id="results-screen" style="display: none;">
+        <h3>Review Your Answers</h3>
+        <table id="summary-table" style="width:100%; border-collapse: collapse; margin-top: 20px;">
+            <thead>
+                <tr style="border-bottom: 2px solid #eee;">
+                    <th style="text-align: left; padding: 10px;">Question</th>
+                    <th style="text-align: center; padding: 10px;">Result</th>
+                    <th style="text-align: right; padding: 10px;">Points</th>
+                </tr>
+            </thead>
+            <tbody id="summary-container">
+                </tbody>
+        </table>
+
+        <button onclick="location.reload()" class="btn-primary" style="margin-top: 30px;">Try Again</button>
+    </div>
+    </div>
     <script>
+        // tofix: color feedback for enum
         const quizData = {
             "id": "f1e211f6-009a-48a6-8c3e-eea7045a4597",
             "topic": "General Science & Logic",
@@ -84,43 +121,115 @@
 
         let userState = {
             currentQuestionIndex: 0,
-            answers: {},
-            score: 0
+            answers: {}
         };
 
         function renderQuestion(index){
             const q = quizData.questions[index];
+            const state = userState.answers[q.id];
             document.getElementById('question-text').textContent = q.text;
             document.querySelectorAll('.input-group').forEach(el => el.style.display = 'none');
+            document.getElementById('progress-fill').style.width = ((index + 1) / quizData.questions.length * 100) + '%';
 
+            const submitBtn = document.getElementById('submit-button');
+            const nextBtn = document.getElementById('next-button');
             if(q.type === 'MCQ'){
                 const container = document.getElementById('mcq-container');
+                const btns = container.querySelectorAll('button'); 
                 container.style.display = 'block';
+                q.choices.forEach((choice, i) => {
+                    btns[i].textContent = q.choices[i];
+                    btns[i].onclick = () => handleSelection(choice);
+                    btns[i].disabled = !!state;
+                    btns[i].className = 'btn-outline';
+                    if(state){
+                        if(choice === q.correctAnswer){
+                            btns[i].className = 'btn-correct';
+                        }
+                        else if(choice === state.user && !state.perfect){
+                            btns[i].className = 'btn-incorrect';
+                        }
+                    }
+                });
+                submitBtn.style.display = 'none';
             }
             else if(q.type === 'TRUE_FALSE'){
                 const container = document.getElementById('true-false-container');
+                const nextBtn = document.getElementById('next-button');
+                const btns = container.querySelectorAll('button');
                 container.style.display = 'block';
-            
+                btns.forEach(btn => {
+                    btn.onclick = () => handleSelection(btn.textContent);
+                    btn.disabled = !!state;
+                    btn.className = 'btn-outline';
+                    if(state){
+                        if(btn.textContent === q.correctAnswer){
+                            btn.className = 'btn-correct';
+                        }
+                        else if(btn.textContent === state.user){
+                            btn.className = 'btn-incorrect';
+                        }
+                    }
+                });
+                submitBtn.style.display = 'none';
             }
             else if(q.type === 'SHORT_ANSWER'){
                 const container = document.getElementById('short-answer-container');
+                const input = container.querySelector('input');
                 container.style.display = 'block';
+                input.disabled = !!state;
+                input.value = state ? state.user : '';
+                if(state){
+                    input.className = state.perfect ? 'input-correct' : 'input-incorrect';
+                }
+                else{
+                    input.className = '';
+                }
+                submitBtn.style.display = state ? 'none' : 'block';
+                
             }
             else if(q.type === 'ENUMERATION'){
                 const container = document.getElementById('enumeration-container');
                 const wrapper = document.getElementById('enum-inputs-wrapper');
                 wrapper.innerHTML = '';
+                
                 for(let i=0; i < q.expectedCount; i++){
-                    wrapper.innerHTML += `<input type="text" class="enum-field" placeholder="Item ${i+1}">`;
+                    const val = state ? state.user[i] : '';
+                    const input = document.createElement('input');
+                    input.type = 'text';
+                    input.className = 'enum-field';
+                    input.value = val;
+                    input.placeholder = `Item ${i+1}`;
+                    if(state){
+                        input.disabled = true;
+                        if(q.correctAnswer.map(v => v.toLowerCase().trim()).includes(val.toLowerCase().trim())){
+                            input.className = 'input-correct';
+                        }
+                        else{
+                            input.className = 'input-incorrect';
+                        }
+                    }
+                    wrapper.appendChild(input);
                 }
                 container.style.display = 'block';
+                submitBtn.style.display = state ? 'none' : 'block';
             }
+            if(index === quizData.questions.length - 1){
+                nextBtn.textContent = 'Finish';
+            }
+            else {
+                nextBtn.textContent = 'Next';
+            }
+            showFeedback(q.id);
         }
 
         function handleNext(){
             if(userState.currentQuestionIndex < quizData.questions.length - 1){
                 userState.currentQuestionIndex++;
                 renderQuestion(userState.currentQuestionIndex);
+            }
+            else if(userState.currentQuestionIndex === quizData.questions.length - 1){
+                finishQuiz();
             }
         }
 
@@ -129,6 +238,140 @@
                 userState.currentQuestionIndex--;
                 renderQuestion(userState.currentQuestionIndex);
             }
+        }
+        // for mcq/tf
+        function handleSelection(choice){
+            const q = quizData.questions[userState.currentQuestionIndex];
+            processAnswer(q, choice);
+        }
+
+        // for enum/short
+        function handleSubmit(){
+            const q = quizData.questions[userState.currentQuestionIndex];
+            if (q.type === 'SHORT_ANSWER'){
+                const input = document.querySelector('#short-answer-container input');
+                processAnswer(q, input.value);
+            }
+            else if (q.type === 'ENUMERATION'){
+                const inputs = document.querySelectorAll('.enum-field');
+                const answers = Array.from(inputs).map(input => input.value);
+                processAnswer(q, answers);
+            }
+        }
+
+        function processAnswer(q, answer){
+            let points = 0;
+            let perfect = false;
+
+            if(q.type === 'SHORT_ANSWER'){
+                const valid = q.correctAnswer.split('|').map(v => v.toLowerCase().trim());
+                points = valid.includes(answer.toLowerCase().trim()) ? 1 : 0;
+                perfect = points === 1;
+            }
+            else if(q.type === 'ENUMERATION'){
+                const targets = q.correctAnswer.map(v => v.toLowerCase().trim());
+                const uniqueAnswers = [...new Set(answer.map(v => v.toLowerCase().trim()))];
+                points = uniqueAnswers.filter(v => targets.includes(v)).length;
+                perfect = points === q.expectedCount;
+            }
+            else{
+                points = (answer === q.correctAnswer) ? 1 : 0;
+                perfect = points === 1;
+            }
+
+            userState.answers[q.id] = { user: answer, points: points, perfect: perfect };
+            renderQuestion(userState.currentQuestionIndex);
+        }
+
+        function showFeedback(qId){
+            const feedbackEl = document.getElementById('feedback-text');
+            const state = userState.answers[qId];
+
+            if(state){
+                if(state.perfect){
+                    feedbackEl.textContent = 'Correct!';
+                    feedbackEl.style.color = 'green';
+                }
+                else if(state.points > 0){
+                    feedbackEl.textContent = `Partial Credit: ${state.points}`;
+                    feedbackEl.style.color = 'orange';
+                }
+                else{
+                    feedbackEl.textContent = 'Incorrect.';
+                    feedbackEl.style.color = 'red';
+                }
+            }
+            else{
+                feedbackEl.textContent = '';
+            }
+        
+        }
+
+        function calculateScore(){
+            let points = 0;
+            let correct = 0;
+            let totalPoints = 0;
+            const totalQuestions = quizData.questions.length;
+
+            quizData.questions.forEach(q => {
+                const state = userState.answers[q.id];
+
+                totalPoints += q.expectedCount;
+
+                if(state){
+                    correct += state.perfect ? 1 : 0;
+                }
+            })
+
+            return {
+                points: totalPoints,
+                correct: correct,
+                maxPoints: totalPoints,
+                total: totalQuestions,
+                percentage: Math.round((correct / totalQuestions) * 100)
+            };
+        }
+
+        function finishQuiz(){
+            const results = calculateScore();
+            const messageEl = document.getElementById('score-message');
+            const summaryContainer = document.getElementById('summary-container');
+            
+            document.querySelector('.container').style.display = 'none';
+            document.getElementById('final-points').textContent = results.points;
+            document.getElementById('final-score').textContent = results.correct;
+            document.getElementById('total-points').textContent = results.maxPoints;
+            document.getElementById('total-questions').textContent = results.total;
+
+            summaryBody.innerHTML = '';
+
+            quizData.questions.forEach((q, index) => {
+                const state = userState.answers[q.id] || {points: 0, perfect: false};
+                const row = document.createElement('tr');
+                row.style.borderBottom = "1px solid black";
+
+                row.innerHTML = `
+                    <td style="padding: 10px; text-align: left;">
+                        <strong>${index + 1}.</strong> ${q.text.substring(0, 50)}${q.text.length > 50 ? '...' : ''}
+                    </td>
+                    <td style="padding: 10px; text-align: right;">${state.points.toFixed(1)} / 1</td>
+                `;
+                summaryBody.appendChild(row);
+            });
+
+            if(results.percentage === 100){
+                messageEl.textContent = 'Perfect score! Well done!';
+            }
+            else if(results.percentage >= 70){
+                messageEl.textContent = 'Great job! You have a good understanding of the material.';
+            }
+            else if(results.percentage >= 50){
+                messageEl.textContent = 'Not bad, but there\'s room for improvement. Keep studying!';
+            }
+            else{
+                messageEl.textContent = 'It looks like you struggled with this quiz. Don\'t be discouraged - review the material and try again!';
+            }
+            document.getElementById('results-screen').style.display = 'block';
         }
 
         renderQuestion(0);
