@@ -10,17 +10,126 @@
         <div style="background: #eee; height: 8px; border-radius: 4px; margin-bottom: 30px;">
             <div style="background: black; width: 60%; height: 100%; border-radius: 4px;"></div>
         </div>
-        <h3>Sample Question</h3>
-        <div style="display: flex; flex-direction: column; gap: 12px; margin: 25px 0;">
-            <button class="btn-outline" style="text-align: left;">A. Sample choice</button>
-            <button class="btn-primary" style="text-align: left;">B. Sample choice (Selected)</button>
-            <button class="btn-outline" style="text-align: left;">C. Sample choice</button>
+        <h3 id="question-text"></h3>
+        <div id="mcq-container" class="input-group" style="display: none; ">
+            <button id="choiceA" class="btn-outline" style="text-align: left;">A. Sample choice</button>
+            <button id="choiceB" class="btn-primary" style="text-align: left;">B. Sample choice (Selected)</button>
+            <button id="choiceC" class="btn-outline" style="text-align: left;">C. Sample choice</button>
+            <button id="choiceD" class="btn-outline" style="text-align: left;">D. Sample choice</button>
+        </div>
+        <div id="true-false-container" class="input-group" style="display: none;">
+            <button>True</button>
+            <button>False</button>
+        </div>
+        <div id="short-answer-container" class="input-group" style="display: none;">
+            <input type="text" placeholder="Enter your answer"><br>
+        </div>
+        <div id="enumeration-container" class="input-group" style="display: none;">
+            <div id="enum-inputs-wrapper"></div>
         </div>
         <div style="display: flex; justify-content: space-between;">
-            <button class="btn-outline">Previous</button>
-            <button class="btn-primary">Next</button>
-            
+            <button onclick="handlePrev()" class="btn-outline">Previous</button>
+            <button onclick="handleNext()" class="btn-primary">Next</button>
         </div>
     </div>
+    <script type="module">
+        const quizData = {
+            "id": "f1e211f6-009a-48a6-8c3e-eea7045a4597",
+            "topic": "General Science & Logic",
+            "difficulty": "Medium",
+            "questions": [
+                {
+                "id": "q-101",
+                "type": "MCQ",
+                "text": "Which planet is known as the Red Planet?",
+                "choices": ["Venus", "Mars", "Jupiter", "Saturn"],
+                "correctAnswer": "Mars",
+                "expectedCount": 1
+                },
+                {
+                "id": "q-102",
+                "type": "TRUE_FALSE",
+                "text": "Sound travels faster through a vacuum than through air.",
+                "choices": ["True", "False"],
+                "correctAnswer": "False",
+                "expectedCount": 1
+                },
+                {
+                "id": "q-103",
+                "type": "SHORT_ANSWER",
+                "text": "What is the common name for the 'NaCl' compound?",
+                "choices": [],
+                "correctAnswer": "salt|table salt|sodium chloride",
+                "expectedCount": 1
+                },
+                {
+                "id": "q-104",
+                "type": "ENUMERATION",
+                "text": "Name the three states of matter (excluding plasma).",
+                "choices": [],
+                "correctAnswer": ["Solid", "Liquid", "Gas"],
+                "expectedCount": 3
+                },
+                {
+                "id": "q-105",
+                "type": "MCQ",
+                "text": "Which of these is a prime number?",
+                "choices": ["4", "9", "11", "15"],
+                "correctAnswer": "11",
+                "expectedCount": 1
+                }
+            ],
+            "createdAt": 1773216196043
+        };
+
+        let userState = {
+            currentQuestionIndex: 0,
+            answers: {},
+            score: 0
+        };
+
+        function renderQuestion(index){
+            const q = quizData.questions[index];
+            document.getElementById('question-text').textContent = q.text;
+            document.querySelectorAll('.input-group').forEach(el => el.style.display = 'none');
+
+            if(q.type === 'MCQ'){
+                const container = document.getElementById('mcq-container');
+                container.style.display = 'block';
+            }
+            else if(q.type === 'TRUE_FALSE'){
+                const container = document.getElementById('true-false-container');
+                container.style.display = 'block';
+            
+            }
+            else if(q.type === 'SHORT_ANSWER'){
+                const container = document.getElementById('short-answer-container');
+                container.style.display = 'block';
+            }
+            else if(q.type === 'ENUMERATION'){
+                const container = document.getElementById('enumeration-container');
+                const wrapper = document.getElementById('enum-inputs-wrapper');
+                wrapper.innerHTML = '';
+                for(let i=0; i < q.expectedCount; i++){
+                    wrapper.innerHTML += `<input type="text" class="enum-field" placeholder="Item ${i+1}">`;
+                }
+                container.style.display = 'block';
+            }
+        }
+
+        function handleNext(){
+            if(userState.currentQuestionIndex < quizData.questions.length - 1){
+                userState.currentQuestionIndex++;
+                renderQuestion(userState.currentQuestionIndex);
+            }
+        }
+
+        function handlePrev(){
+            if(userState.currendQuestionIndex > 0){
+                userState.currentQuestionIndex--;
+                renderQuestion(userState.currentQuestionIndex);
+            }
+        }
+    </script>
 </body>
 </html>
