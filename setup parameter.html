@@ -56,10 +56,10 @@
 
             <label>Question Types</label>
             <div class="checkbox-group">
-                <label class="checkbox-item"><input type="checkbox" name="types" value="Multiple Choice" checked> Multiple Choice</label>
-                <label class="checkbox-item"><input type="checkbox" name="types" value="Identification"> Identification</label>
-                <label class="checkbox-item"><input type="checkbox" name="types" value="True or False"> True/False</label>
-                <label class="checkbox-item"><input type="checkbox" name="types" value="Enumeration"> Enumeration</label>
+                <label class="checkbox-item"><input type="checkbox" name="types" value="MCQ" checked> Multiple Choice</label>
+                <label class="checkbox-item"><input type="checkbox" name="types" value="SHORT_ANSWER"> Identification</label>
+                <label class="checkbox-item"><input type="checkbox" name="types" value="TRUE_FALSE"> True/False</label>
+                <label class="checkbox-item"><input type="checkbox" name="types" value="ENUMERATION"> Enumeration</label>
             </div>
 
             <button type="submit" class="btn-primary">Generate Quiz</button>
@@ -67,46 +67,113 @@
     </div>
 
     <script type="module">
-        // todo: disable generate button while loading prompt
-        // todo: read/pass method based on file;
-        import { GoogleGenerativeAI } from "https://esm.run/@google/generative-ai";
-
-        const API_KEY = "AIzaSyAUodEfGCdgQiMlW4UXRVdp6kIZTFuK1RM";
+        // toremember: update the quiz.html to support the choice array schema which is always array
+        import { GoogleGenerativeAI, SchemaType} from "https://esm.run/@google/generative-ai";
+        import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm';
+        import { CONFIG } from './config.js';
+        const supabase = createClient(CONFIG.SUPABASE_URL, CONFIG.SUPABASE_ANON_KEY);
+        const API_KEY = CONFIG.GEMINI_KEY;
         const genAI = new GoogleGenerativeAI(API_KEY);
         const quizForm = document.getElementById('quiz-form');
+        const schema = {
+            type: SchemaType.OBJECT,
+            required: ["questions"],
+            properties: {
+                questions: {
+                    type: SchemaType.ARRAY,
+                    items: {
+                        type: SchemaType.OBJECT,
+                        required: ["type", "text", "choices", "correctAnswer"],
+                        properties: {
+                            type: { 
+                                type: SchemaType.STRING, 
+                                enum: ["MCQ", "TRUE_FALSE", "SHORT_ANSWER", "ENUMERATION"] 
+                            },
+                            text: { type: SchemaType.STRING },
+                            choices: { type: SchemaType.ARRAY, items: { type: SchemaType.STRING } },
+                            correctAnswer: { type: SchemaType.ARRAY, items: { type: SchemaType.STRING } },
+                            expectedCount: { type: SchemaType.INTEGER }
+                        }
+                    }
+                }
+            }
+        };
+        const submitBtn = document.querySelector('button');
 
-        async function runGemini(customPrompt) {
+        async function runGemini(prompt, metadata) {
             try {
-                const model = genAI.getGenerativeModel({ model: "gemini-flash-latest" });
-                console.log("Waiting for response...");
-                const result = await model.generateContent(customPrompt);
-                console.log("Gemini Output:\n", result.response.text());
-            } catch (error) {
+                submitBtn.disabled = true;
+                submitBtn.textContent = "Generating...";
+
+                const model = genAI.getGenerativeModel({
+                    model: "gemini-2.0-flash",
+                    generationConfig: {
+                        responseMimeType: "application/json",
+                        responseSchema: schema,
+                    },
+                });
+
+                const result = await model.generateContent(prompt);
+                const aiOutput = JSON.parse(result.response.text());
+
+                const quizEnvelope = {
+                    id: crypto.randomUUID(),
+                    topic: metadata.topic,
+                    difficulty: metadata.difficulty,
+                    created_at: Date.now(),
+                    questions: aiOutput.questions.map(q=>({
+                        id: crypto.randomUUID(),
+                        ...q // spread operator :O; includes type, text, choices, correctAnswer, expectedCount
+                    }))
+                };
+                console.log(JSON.stringify(quizEnvelope, null, 2));
+                sessionStorage.setItem('activeQuiz', JSON.stringify(quizEnvelope));
+
+                const { error } = await supabase
+                .from('quizzes')
+                .insert([
+                    {
+                        id: quizEnvelope.id,
+                        topic: quizEnvelope.topic,
+                        difficulty: quizEnvelope.difficulty,
+                        data: quizEnvelope,
+                        createdAt: quizEnvelope.createdAt
+                    }
+                ]);
+
+                if (error) throw error;
+                console.log("Quiz Generated! Redirecting...");
+                // window.location.href = 'quiz.html';
+
+            } 
+            catch (error) {
                 console.error("Error:", error);
+            } 
+            finally {
+                submitBtn.disabled = false;
+                submitBtn.innerText = "Generate Quiz";
             }
         }
-
         quizForm.addEventListener('submit', async (event) => {
             event.preventDefault();
             const formData = new FormData(quizForm);
 
-            const data = {
+            const metadata = {
                 topic: formData.get('topic'),
                 number: formData.get('number'),
                 difficulty: formData.get('difficulty'),
                 types: formData.getAll('types')
             };
 
-            if (data.types.length === 0) {
+            if (metadata.types.length === 0) {
                 alert("Please select at least one question type!");
                 return;
             }
 
-            const prompt = `Generate a ${data.number}-question ${data.difficulty} quiz about ${data.topic}.
-                            Include the following types: ${data.types.join(', ')}.`;
+            const prompt = `Generate a ${metadata.number}-question ${metadata.difficulty} quiz about ${metadata.topic}. Use only these types: ${metadata.types.join(', ')}.`;
 
             console.log("Prompting:", prompt);
-            // await runGemini(prompt);
+            await runGemini(prompt, metadata);
         });
     </script>
 </body>
