@@ -357,6 +357,7 @@
                     <td style="padding: 10px; text-align: left;">
                         <strong>${index + 1}.</strong> ${q.text.substring(0, 50)}${q.text.length > 50 ? '...' : ''}
                     </td>
+                    <td style="padding: 10px; text-align: right;">${state.perfect ? 'Correct' : 'Wrong'}</td>
                     <td style="padding: 10px; text-align: right;">${state.points} / ${q.expectedCount}</td>
                 `;
                 summaryContainer.appendChild(row);
