@@ -32,7 +32,7 @@
             <button onclick="handleNext()" class="btn-primary">Next</button>
         </div>
     </div>
-    <script type="module">
+    <script>
         const quizData = {
             "id": "f1e211f6-009a-48a6-8c3e-eea7045a4597",
             "topic": "General Science & Logic",
@@ -125,11 +125,13 @@
         }
 
         function handlePrev(){
-            if(userState.currendQuestionIndex > 0){
+            if(userState.currentQuestionIndex > 0){
                 userState.currentQuestionIndex--;
                 renderQuestion(userState.currentQuestionIndex);
             }
         }
+
+        renderQuestion(0);
     </script>
 </body>
 </html>
