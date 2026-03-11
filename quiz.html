@@ -197,21 +197,19 @@
                     const val = (state && state.user[i]) ? state.user[i].toLowerCase().trim() : '';
                     const input = document.createElement('input');
                     input.type = 'text';
-                    input.className = 'enum-field';
                     input.value = state ? state.user[i] : '';
                     input.placeholder = `Item ${i+1}`;
-
+                    input.classList.add('enum-field');
                     if(state){
                         input.disabled = true;
                         const targetIndex = availableTargets.indexOf(val);
                         if(val !== '' && targetIndex !== -1){
-                            input.className = 'input-correct';
+                            input.classList.add('input-correct');
                             availableTargets.splice(targetIndex, 1);
                         }
                         else{
-                            input.className = 'input-incorrect';
+                            input.classList.add('input-incorrect');
                         }
-                        input.className.add('enum-field');
                     }
                     wrapper.appendChild(input);
                 }
