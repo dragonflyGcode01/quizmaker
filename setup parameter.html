@@ -91,7 +91,7 @@
                             },
                             text: { type: SchemaType.STRING },
                             choices: { type: SchemaType.ARRAY, items: { type: SchemaType.STRING } },
-                            correctAnswer: { type: SchemaType.ARRAY, items: { type: SchemaType.STRING } },
+                            correctAnswer: { type: SchemaType.ARRAY, items: { type: SchemaType.STRING }, description: "Provide all common variations of the correct answer (e.g, synonyms, alternative phrasings). " },
                             expectedCount: { type: SchemaType.INTEGER }
                         }
                     }
@@ -118,6 +118,7 @@
                         generationConfig: {
                             responseMimeType: "application/json",
                             responseSchema: schema,
+                            temperature: 0.7,
                         },
                     });
 
