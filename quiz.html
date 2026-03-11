@@ -68,7 +68,8 @@
     </div>
     <script>
         // tofix: color feedback for enum
-        const quizData = {
+        const quizData = JSON.parse(sessionStorage.getItem('activeQuiz')) || fallback;
+        const fallback = {
             "id": "f1e211f6-009a-48a6-8c3e-eea7045a4597",
             "topic": "General Science & Logic",
             "difficulty": "Medium",
@@ -78,7 +79,7 @@
                 "type": "MCQ",
                 "text": "Which planet is known as the Red Planet?",
                 "choices": ["Venus", "Mars", "Jupiter", "Saturn"],
-                "correctAnswer": "Mars",
+                "correctAnswer": ["Mars"],
                 "expectedCount": 1
                 },
                 {
@@ -86,7 +87,7 @@
                 "type": "TRUE_FALSE",
                 "text": "Sound travels faster through a vacuum than through air.",
                 "choices": ["True", "False"],
-                "correctAnswer": "False",
+                "correctAnswer": ["False"],
                 "expectedCount": 1
                 },
                 {
@@ -94,7 +95,7 @@
                 "type": "SHORT_ANSWER",
                 "text": "What is the common name for the 'NaCl' compound?",
                 "choices": [],
-                "correctAnswer": "salt|table salt|sodium chloride",
+                "correctAnswer": ["salt", "table salt", "sodium chloride"],
                 "expectedCount": 1
                 },
                 {
@@ -110,11 +111,11 @@
                 "type": "MCQ",
                 "text": "Which of these is a prime number?",
                 "choices": ["4", "9", "11", "15"],
-                "correctAnswer": "11",
+                "correctAnswer": ["11"],
                 "expectedCount": 1
                 }
             ],
-            "createdAt": 1773216196043
+            "createdAt": new Date().toISOString(),
         };
 
         let userState = {
@@ -141,7 +142,7 @@
                     btns[i].disabled = !!state;
                     btns[i].className = 'btn-outline';
                     if(state){
-                        if(choice === q.correctAnswer){
+                        if(q.correctAnswer.includes(choice)){
                             btns[i].className = 'btn-correct';
                         }
                         else if(choice === state.user && !state.perfect){
@@ -161,7 +162,7 @@
                     btn.disabled = !!state;
                     btn.className = 'btn-outline';
                     if(state){
-                        if(btn.textContent === q.correctAnswer){
+                        if(q.correctAnswer.includes(btn.textContent)){
                             btn.className = 'btn-correct';
                         }
                         else if(btn.textContent === state.user){
@@ -266,7 +267,7 @@
             let perfect = false;
 
             if(q.type === 'SHORT_ANSWER'){
-                const valid = q.correctAnswer.split('|').map(v => v.toLowerCase().trim());
+                const valid = q.correctAnswer.map(v => v.toLowerCase().trim());
                 points = valid.includes(answer.toLowerCase().trim()) ? 1 : 0;
                 perfect = points === 1;
             }
@@ -277,7 +278,7 @@
                 perfect = points === q.expectedCount;
             }
             else{
-                points = (answer === q.correctAnswer) ? 1 : 0;
+                points = q.correctAnswer.includes(answer) ? 1 : 0;
                 perfect = points === 1;
             }
 
