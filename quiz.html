@@ -10,9 +10,14 @@
         .btn-outline { border: 1px solid #ccc; background: white; }
         .input-correct { background-color: #d4edda !important; border: 2px solid #28a745 !important; }
         .input-incorrect { background-color: #f8d7da !important; border: 2px solid #dc3545 !important; }
+        a, a:link, a:visited, a:hover, a:active {
+            text-decoration: none;
+            color: black;
+        }
     </style>
 </head>
 <body>
+    <div class="window-header"><a href="./landing page.html">QuizMaker </a><span>+ 👤</span></div>
     <div class="container" style="max-width: 600px;">
         <div id="progress-bar" style="background: #eee; height: 8px; border-radius: 4px; margin-bottom: 30px;">
             <div id="progress-fill" style="background: black; width: 60%; height: 100%; border-radius: 4px;"></div>
@@ -58,6 +63,7 @@
                     <th style="text-align: left; padding: 10px;">Question</th>
                     <th style="text-align: center; padding: 10px;">Result</th>
                     <th style="text-align: right; padding: 10px;">Points</th>
+                    <th style="text-align: left; padding: 10px;">Correct Answer/s</th>
                 </tr>
             </thead>
             <tbody id="summary-container">
@@ -68,6 +74,7 @@
     </div>
     <script>
         // tofix: color feedback for enum
+        // to do: history trail
         const quizData = JSON.parse(sessionStorage.getItem('activeQuiz')) || fallback;
         const fallback = {
             "id": "f1e211f6-009a-48a6-8c3e-eea7045a4597",
@@ -354,13 +361,15 @@
                 const row = document.createElement('tr');
                 row.style.borderBottom = "1px solid black";
 
+                // q.text.substring(0, 50) ${q.text.length > 50 ? '...' : ''
                 row.innerHTML = `
                     <td style="padding: 10px; text-align: left;">
-                        <strong>${index + 1}.</strong> ${q.text.substring(0, 50)}${q.text.length > 50 ? '...' : ''}
+                        <strong>${index + 1}.</strong> ${q.text}
                     </td>
                     <td style="padding: 10px; text-align: right;">${state.perfect ? 'Correct' : 'Wrong'}</td>
                     <td style="padding: 10px; text-align: right;">${state.points} / ${q.expectedCount}</td>
-                `;
+                    <td style="padding: 10px; text-align: left;">${q.correctAnswer}</td>
+                    `;
                 summaryContainer.appendChild(row);
             });
 
