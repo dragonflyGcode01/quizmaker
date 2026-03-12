@@ -46,12 +46,12 @@
             <button id="next-button" onclick="handleNext()" class="btn-primary">Next</button>
         </div>
     </div>
-    <div id="results-screen" class="container" style="max-width: 600px; display: none;">
+    <div id="results-screen" class="container" style="max-width: 650px; display: none;">
         <h1>Quiz Complete!</h1>
-        <div id=score-wrapper>
-            <span id="final-score">0</span> / <span id="total-questions">0</span>
+        <div id="percentage-wrapper">
+            <span id="final-percentage">0%</span>
         </div>
-        <div id=points-wrapper>
+        <div id="points-wrapper">
             <span id="final-points">0</span> / <span id="total-points">0</span>
         </div>
         <p id="score-message"></p>
@@ -72,6 +72,7 @@
 
         <button onclick="location.reload()" class="btn-primary" style="margin-top: 30px;">Try Again</button>
     </div>
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
     <script>
         // tofix: color feedback for enum
         // to do: history trail
@@ -318,28 +319,28 @@
         }
 
         function calculateScore(){
-            let points = 0;
-            let correct = 0;
-            let totalPoints = 0;
-            const totalQuestions = quizData.questions.length;
+            let earnedPoints = 0;
+            let perfectQuestions = 0;
+            let maxPossiblePoints = 0;
+            const totalQuestionsCount = quizData.questions.length;
 
             quizData.questions.forEach(q => {
                 const state = userState.answers[q.id];
 
-                totalPoints += q.expectedCount;
+                maxPossiblePoints += q.expectedCount;
 
                 if(state){
-                    correct += state.perfect ? 1 : 0;
-                    points += state.points;
+                    perfectQuestions += state.perfect ? 1 : 0;
+                    earnedPoints += state.points;
                 }
             })
 
             return {
-                points: points,
-                correct: correct,
-                maxPoints: totalPoints,
-                total: totalQuestions,
-                percentage: Math.round((correct / totalQuestions) * 100)
+                points: earnedPoints,
+                correct: perfectQuestions,
+                maxPoints: maxPossiblePoints,
+                total: totalQuestionsCount,
+                percentage: Math.round((earnedPoints / maxPossiblePoints) * 100)
             };
         }
 
@@ -350,15 +351,18 @@
             
             document.querySelector('.container').style.display = 'none';
             document.getElementById('final-points').textContent = results.points;
-            document.getElementById('final-score').textContent = results.correct;
+            document.getElementById('final-percentage').textContent = results.percentage + "%";
             document.getElementById('total-points').textContent = results.maxPoints;
-            document.getElementById('total-questions').textContent = results.total;
 
             summaryContainer.innerHTML = '';
 
             quizData.questions.forEach((q, index) => {
                 const state = userState.answers[q.id] || {points: 0, perfect: false};
                 const row = document.createElement('tr');
+                const icon = state.perfect 
+                ? '<i class="ph-bold ph-check-circle" style="color: green;"></i>' 
+                : '<i class="ph-bold ph-x-circle" style="color: red;"></i>';
+
                 row.style.borderBottom = "1px solid black";
 
                 // q.text.substring(0, 50) ${q.text.length > 50 ? '...' : ''
@@ -366,8 +370,8 @@
                     <td style="padding: 10px; text-align: left;">
                         <strong>${index + 1}.</strong> ${q.text}
                     </td>
-                    <td style="padding: 10px; text-align: right;">${state.perfect ? 'Correct' : 'Wrong'}</td>
-                    <td style="padding: 10px; text-align: right;">${state.points} / ${q.expectedCount}</td>
+                    <td style="padding: 10px; text-align: center;">${icon}</td>
+                    <td style="padding: 10px; text-align: center;">${state.points} / ${q.expectedCount}</td>
                     <td style="padding: 10px; text-align: left;">${q.correctAnswer}</td>
                     `;
                 summaryContainer.appendChild(row);
@@ -386,7 +390,32 @@
                 messageEl.textContent = 'It looks like you struggled with this quiz. Don\'t be discouraged - review the material and try again!';
             }
             document.getElementById('results-screen').style.display = 'block';
+
+            const user_answers_for_db = quizData.questions.map(q => {
+                const state = userState.answers[q.id];
+                return {
+                    questionId: q.id,
+                    input: state ? state.user : '',
+                    isCorrect: state ? state.perfect : false,
+                    pointsEarned: state ? state.points : 0
+                };
+            });
+            // saveQuizAttempt(quizData, user_answers_for_db, results);
         }
+
+        async function saveQuizAttempt(activeQuiz, userResults, results){
+            const attemptData = {
+                quiz_id: activeQuiz.id,
+                score: results.points,
+                max_points: results.maxPoints,
+                total_questions: results.total,
+                user_answers: userResults,
+                created_at: new Date().toISOString()
+            };
+
+            const { error } = await supabase.from('quiz_attempts').insert([attemptData]);
+            if(error) console.error('Error saving quiz attempt:', error); 
+        } 
 
         renderQuestion(0);
     </script>
